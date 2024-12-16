@@ -6,26 +6,58 @@ on:
       - main
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+      actions: read
+      security-events: write
     env:
       REGISTRY: ghcr.io
-      IMAGE_NAME: ${{ github.repository }}
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
-      - uses: docker/build-push-action@v2
+      - name: lowercase github.repository
+        run: |
+          echo "IMAGE_NAME=`echo ${{ env.REGISTRY }}/${{ github.repository }}:${{ github.sha }} | tr '[:upper:]' '[:lower:]'`" >> ${GITHUB_ENV}
+
+      - uses: docker/build-push-action@v6
         with:
-          tags: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
-          push: true
+          tags: "${{ env.IMAGE_NAME }}"
+          platforms: linux/amd64
+
+      -
+        name: Scan for vulnerabilities
+        uses: crazy-max/ghaction-container-scan@v3
+        id: scan
+        env:
+          TRIVY_DISABLE_VEX_NOTICE: true
+        with:
+          image: ${{ env.IMAGE_NAME }}
+          annotations: true
+          severity_threshold: HIGH
+          dockerfile: ./Dockerfile
+      -
+        name: Upload SARIF file
+        if: ${{ steps.scan.outputs.sarif != '' }}
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: ${{ steps.scan.outputs.sarif }}
 
       # cookie strategy
       - name: Run Docker Image with Cookie Strategy
-        run: docker run --name statista_proxy -d -p80:80 -e STRATEGY=COOKIE -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 -e COOKIE_STRATEGY_NAME="my_app_routing=new" statista_proxy
+        run: |
+          docker run --name statista_proxy -d -p80:80 \
+          -e STRATEGY=COOKIE \
+          -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 \
+          -e COOKIE_STRATEGY_NAME="my_app_routing=new" \
+          "${{ env.IMAGE_NAME }}"
+
+          sleep 2
+          docker ps -a
+          docker logs statista_proxy
 
       - name: Test Docker Image with Cookie Strategy without cookie
         run: |
@@ -41,7 +73,17 @@ jobs:
 
       # percentage strategy
       - name: Run Docker Image with Percentage Strategy
-        run: docker run --name statista_proxy -d -p80:80 -e STRATEGY=PERCENTAGE -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 -e PERCENTAGE_NEW=50 -e PERCENTAGE_OLD=50 -e COOKIE_PERCENTAGE_NAME=my_app statista_proxy
+        run: |
+          docker run --name statista_proxy -d -p80:80 \
+          -e STRATEGY=PERCENTAGE \
+          -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 \
+          -e PERCENTAGE_NEW=50 -e PERCENTAGE_OLD=50 \
+          -e COOKIE_PERCENTAGE_NAME=my_app \
+          "${{ env.IMAGE_NAME }}"
+
+          sleep 2
+          docker ps -a
+          docker logs statista_proxy
 
       - name: Test Docker Image with Percentage Strategy backend selection
         run: |
@@ -53,14 +95,65 @@ jobs:
 
       - name: Test Docker Image with Percentage Strategy with sticky cookie on new domain
         run: |
-          curl -Is localhost:80 --cookie "my_app=new_domain" | grep -i -e "server: nginx"
+          curl -Is localhost:80 --cookie "my_app=new_domain" | grep -i -e "x-served-by: cache-"
 
       - name: Test Docker Image with Percentage Strategy with round robin
         # sadly we dont know which server serves us first, so we have to check both
         run: |
-          curl -Is localhost:80 | grep -i -e "server: " -e "set-cookie: my_app=new_domain; path=/" -e "set-cookie: my_app=old_domain; path=/"
-          curl -Is localhost:80 | grep -i -e "server: " -e "set-cookie: my_app=new_domain; path=/" -e "set-cookie: my_app=old_domain; path=/"
+          curl -Is localhost:80 | grep -i -e "server:" -e "x-served-by:" -e "set-cookie: my_app=new_domain; path=/" -e "set-cookie: my_app=old_domain; path=/"
+          curl -Is localhost:80 | grep -i -e "server:" -e "x-served-by:" -e "set-cookie: my_app=new_domain; path=/" -e "set-cookie: my_app=old_domain; path=/"
 
       - name: Stop the Percentage Strategy Docker Image
         if: success() || failure()
         run: docker rm -f statista_proxy
+
+      # variable validation
+      - name: Run Docker Image with Invalid new Percentage
+        run: |
+          set +e
+
+          docker run \
+          -e STRATEGY=PERCENTAGE \
+          -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 \
+          -e PERCENTAGE_NEW=foo -e PERCENTAGE_OLD=50 \
+          -e COOKIE_PERCENTAGE_NAME=my_app \
+          "${{ env.IMAGE_NAME }}"
+
+          if [[ $? == 1 ]]; then exit 0; else exit 1; fi
+
+      - name: Run Docker Image with Invalid old Percentage
+        run: |
+          set +e
+
+          docker run \
+          -e STRATEGY=PERCENTAGE \
+          -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 \
+          -e PERCENTAGE_NEW=50 -e PERCENTAGE_OLD=foo \
+          -e COOKIE_PERCENTAGE_NAME=my_app \
+          "${{ env.IMAGE_NAME }}"
+
+          if [[ $? == 1 ]]; then exit 0; else exit 1; fi
+
+      - name: Run Docker Image with Invalid old domain
+        run: |
+          set +e
+
+          docker run \
+          -e STRATEGY=PERCENTAGE \
+          -e NEW_DOMAIN=apache.org:443 \
+          -e COOKIE_PERCENTAGE_NAME=my_app \
+          "${{ env.IMAGE_NAME }}"
+
+          if [[ $? == 1 ]]; then exit 0; else exit 1; fi
+
+      - name: Run Docker Image with Invalid new domain
+        run: |
+          set +e
+
+          docker run \
+          -e STRATEGY=PERCENTAGE \
+          -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:lol \
+          -e COOKIE_PERCENTAGE_NAME=my_app \
+          "${{ env.IMAGE_NAME }}"
+
+          if [[ $? == 1 ]]; then exit 0; else exit 1; fi

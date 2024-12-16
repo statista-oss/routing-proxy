@@ -1,4 +1,6 @@
-# Statista Proxy
+# Routing Proxy
+
+uses HAPROXY under the hood.
 
 > route between your legacy and your new application using different strategies
 
@@ -8,8 +10,9 @@ set the following environment variables for this container:
     
 ```bash
 STRATEGY=PERCENTAGE | COOKIE
-OLD_DOMAIN=old.statista.com
-COOKIE_STRATEGY_NAME=my_app_routing=new
+OLD_DOMAIN=old.domain.com:443
+NEW_DOMAIN=new.domain.com:443
+COOKIE_STRATEGY_NAME="my_app_routing=new"
 COOKIE_PERCENTAGE_NAME=my_app_sticky_name
 PERCENTAGE_OLD=70
 PERCENTAGE_NEW=30 
@@ -31,8 +34,6 @@ this cookie will taken into account when a forced routing to the new application
 
 ### COOKIE_PERCENTAGE_NAME
 this is the name of the cookie for implementing the sticky session
-
-> this cookie needs to be present in our [cookie consent](https://forms.office.com/pages/responsepage.aspx?id=OfiFB67f4U-gaID-j8YfK0gVGkEOyf1NiUPPYqdVPa5UNFFUUVNPSEZNMDVSOExKNDE0NksxQURSMi4u&route=shorturl) 
 
 ### PERCENTAGE_OLD
 how much traffic should be routed to the old application
@@ -83,3 +84,8 @@ curl -I localhost:80
 curl -I --cookie "my_app_routing=new" localhost:80
 ```
 > should be the new application
+
+
+## Usage
+
+tbd
