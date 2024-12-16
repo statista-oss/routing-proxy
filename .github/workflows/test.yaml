@@ -1,0 +1,66 @@
+name: Test Docker Image
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - uses: docker/build-push-action@v2
+        with:
+          tags: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          push: true
+
+      # cookie strategy
+      - name: Run Docker Image with Cookie Strategy
+        run: docker run --name statista_proxy -d -p80:80 -e STRATEGY=COOKIE -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 -e COOKIE_STRATEGY_NAME="my_app_routing=new" statista_proxy
+
+      - name: Test Docker Image with Cookie Strategy without cookie
+        run: |
+          curl -Is localhost:80 | grep -i -e "x-proxy-flow: route-to-legacy"
+
+      - name: Test Docker Image with Cookie Strategy with cookie
+        run: |
+          curl -Is --cookie "my_app_routing=new" localhost:80 | grep -i -e "x-proxy-flow: route-to-new"
+
+      - name: Stop the Cookie Strategy Docker Image
+        if: success() || failure()
+        run: docker rm -f statista_proxy
+
+      # percentage strategy
+      - name: Run Docker Image with Percentage Strategy
+        run: docker run --name statista_proxy -d -p80:80 -e STRATEGY=PERCENTAGE -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 -e PERCENTAGE_NEW=50 -e PERCENTAGE_OLD=50 -e COOKIE_PERCENTAGE_NAME=my_app statista_proxy
+
+      - name: Test Docker Image with Percentage Strategy backend selection
+        run: |
+          curl -Is localhost:80 | grep -i -e "x-proxy-flow: route-to-percentage"
+
+      - name: Test Docker Image with Percentage Strategy with sticky cookie on old domain
+        run: |
+          curl -Is localhost:80 --cookie "my_app=old_domain" | grep -i -e "server: Apache"
+
+      - name: Test Docker Image with Percentage Strategy with sticky cookie on new domain
+        run: |
+          curl -Is localhost:80 --cookie "my_app=new_domain" | grep -i -e "server: nginx"
+
+      - name: Test Docker Image with Percentage Strategy with round robin
+        # sadly we dont know which server serves us first, so we have to check both
+        run: |
+          curl -Is localhost:80 | grep -i -e "server: " -e "set-cookie: my_app=new_domain; path=/" -e "set-cookie: my_app=old_domain; path=/"
+          curl -Is localhost:80 | grep -i -e "server: " -e "set-cookie: my_app=new_domain; path=/" -e "set-cookie: my_app=old_domain; path=/"
+
+      - name: Stop the Percentage Strategy Docker Image
+        if: success() || failure()
+        run: docker rm -f statista_proxy
