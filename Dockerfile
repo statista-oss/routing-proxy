@@ -4,7 +4,7 @@ LABEL org.opencontainers.image.source=https://github.com/statista-oss/proxy-rout
 LABEL org.opencontainers.image.description="haproxy configurable through env vars for different routing strategies"
 
 USER root
-RUN apk add --no-cache curl socat
+RUN apk add --no-cache socat
 
 USER haproxy
 
