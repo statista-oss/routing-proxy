@@ -88,4 +88,41 @@ curl -I --cookie "my_app_routing=new" localhost:80
 
 ## Usage
 
-tbd
+### Docker-Compose
+
+```yaml
+  routing-proxy:
+    image: ghcr.io/statista-oss/routing-proxy:latest
+    environment:
+      STRATEGY: PERCENTAGE
+      OLD_DOMAIN: haproxy.com:443
+      NEW_DOMAIN: apache.org:443
+      COOKIE_PERCENTAGE_NAME: my_app
+      PERCENTAGE_OLD: 50
+      PERCENTAGE_NEW: 50
+    ports:
+      - 80:80
+```
+
+currently only HTTP (as it mostly will run behind an SSL loadbalancer anyways) is supported.
+
+### ECS Fargate
+
+when defining this image in your `Task-Definition`, make sure you add those `systemControls`:
+
+```js
+{
+  systemControls: [
+    {
+      namespace: 'net.ipv4.ip_unprivileged_port_start',
+      value: '0',
+    }
+  ]
+}
+```
+
+## TODOS
+
+- [ ] add SSL support
+- [ ] logging support?
+- [ ] route based on specific users/user-groups (cookie lookups)
