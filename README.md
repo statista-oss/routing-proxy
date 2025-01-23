@@ -41,6 +41,14 @@ how much traffic should be routed to the old application
 ### PERCENTAGE_NEW
 how much traffic should be routed to the new application
 
+### DNS_RESOLVER (optional, default=1.1.1.1)
+The DNS resolver to use for resolving the domain names to IP addresses.
+If you want to reroute internal traffic you might want to change that.
+
+### SERVER_COUNT (optional, default=5)
+as we are using DNS Resolver we try to create a server for each IP address we get back from the DNS query. 
+This is the maximum amount of servers we will create. 
+
 
 ## Local Testing
 
@@ -54,7 +62,7 @@ docker build -t statista-proxy .
 run the container
 
 ```bash
-docker run -p80:80 -e STRATEGY=PERCENTAGE -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 -e PERCENTAGE_NEW=50 -e PERCENTAGE_OLD=50 -e COOKIE_PERCENTAGE_NAME=my_app statista_proxy
+docker run -p80:80 -e STRATEGY=PERCENTAGE -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 -e PERCENTAGE_NEW=50 -e PERCENTAGE_OLD=50 -e COOKIE_PERCENTAGE_NAME=my_app statista-proxy
 ```
 
 run requests (since its round robin every request should be flipped)
@@ -69,7 +77,7 @@ further requests made by the same client will stick to this server
 ### Cookie based routing
 
 ```bash
-docker run -p80:80 -e STRATEGY=COOKIE -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 -e COOKIE_STRATEGY_NAME="my_app_routing=new" statista_proxy
+docker run -p80:80 -e STRATEGY=COOKIE -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 -e COOKIE_STRATEGY_NAME="my_app_routing=new" statista-proxy
 ```
 
 run requests (since its round robin every request should be flipped)
