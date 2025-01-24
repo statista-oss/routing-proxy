@@ -60,10 +60,13 @@ jobs:
           docker logs statista_proxy
 
       - name: Test Docker Image with Cookie Strategy without cookie
+        id: test-cookie-no-cookie
+        continue-on-error: true
         run: |
           curl -Is localhost:80 | grep -i -e "x-proxy-flow: route-to-legacy"
 
       - name: Test Docker Image with Cookie Strategy with cookie
+        continue-on-error: true
         run: |
           curl -Is --cookie "my_app_routing=new" localhost:80 | grep -i -e "x-proxy-flow: route-to-new"
 
@@ -86,18 +89,26 @@ jobs:
           docker logs statista_proxy
 
       - name: Test Docker Image with Percentage Strategy backend selection
+        id: test-percentage-strategy
+        continue-on-error: true
         run: |
           curl -Is localhost:80 | grep -i -e "x-proxy-flow: route-to-percentage"
 
       - name: Test Docker Image with Percentage Strategy with sticky cookie on old domain
+        id: test-percentage-sticky-old-domain
+        continue-on-error: true
         run: |
           curl -Is localhost:80 --cookie "my_app=old_domain" | grep -i -e "server: Apache"
 
       - name: Test Docker Image with Percentage Strategy with sticky cookie on new domain
+        id: test-percentage-sticky-new-domain
+        continue-on-error: true
         run: |
           curl -Is localhost:80 --cookie "my_app=new_domain" | grep -i -e "x-served-by: cache-"
 
       - name: Test Docker Image with Percentage Strategy with round robin
+        id: test-percentage-round-robin
+        continue-on-error: true
         # sadly we dont know which server serves us first, so we have to check both
         run: |
           curl -Is localhost:80 | grep -i -e "server:" -e "x-served-by:" -e "set-cookie: my_app=new_domain; path=/" -e "set-cookie: my_app=old_domain; path=/"
@@ -107,53 +118,91 @@ jobs:
         if: success() || failure()
         run: docker rm -f statista_proxy
 
+      # validation TEMPLATE
+      #- name: name of the test
+      #  timeout-minutes: 1 # set so if the command runs successfully the test will fail
+      #  id: test-validation-percentage-new # important since all steps run and we collect the failure at then end
+      #  continue-on-error: true # important for allowing other steps to be run regardless of this one which might fail
+      #  run: |
+      #    ! docker run \ # important simply negate the exit code, since we expect the container to fail (which means succesfull validation)
+      #    -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 \
+      #    "${{ env.IMAGE_NAME }}"
+
       # variable validation
       - name: Run Docker Image with Invalid new Percentage
+        timeout-minutes: 1
+        id: test-validation-percentage-new
+        continue-on-error: true
         run: |
-          set +e
-
-          docker run \
+          ! docker run \
           -e STRATEGY=PERCENTAGE \
           -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 \
           -e PERCENTAGE_NEW=foo -e PERCENTAGE_OLD=50 \
           -e COOKIE_PERCENTAGE_NAME=my_app \
           "${{ env.IMAGE_NAME }}"
 
-          if [[ $? == 1 ]]; then exit 0; else exit 1; fi
-
       - name: Run Docker Image with Invalid old Percentage
+        timeout-minutes: 1
+        id: test-validation-percentage-old
+        continue-on-error: true
         run: |
-          set +e
-
-          docker run \
+          ! docker run \
           -e STRATEGY=PERCENTAGE \
           -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 \
           -e PERCENTAGE_NEW=50 -e PERCENTAGE_OLD=foo \
           -e COOKIE_PERCENTAGE_NAME=my_app \
           "${{ env.IMAGE_NAME }}"
 
-          if [[ $? == 1 ]]; then exit 0; else exit 1; fi
-
       - name: Run Docker Image with Invalid old domain
+        timeout-minutes: 1
+        id: test-validation-old-domain
+        continue-on-error: true
         run: |
-          set +e
-
-          docker run \
+          ! docker run \
           -e STRATEGY=PERCENTAGE \
           -e NEW_DOMAIN=apache.org:443 \
           -e COOKIE_PERCENTAGE_NAME=my_app \
           "${{ env.IMAGE_NAME }}"
 
-          if [[ $? == 1 ]]; then exit 0; else exit 1; fi
-
       - name: Run Docker Image with Invalid new domain
+        timeout-minutes: 1
+        id: test-validation-new-domain
+        continue-on-error: true
         run: |
-          set +e
-
-          docker run \
+          ! docker run \
           -e STRATEGY=PERCENTAGE \
           -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:lol \
           -e COOKIE_PERCENTAGE_NAME=my_app \
           "${{ env.IMAGE_NAME }}"
 
-          if [[ $? == 1 ]]; then exit 0; else exit 1; fi
+      - name: Run Docker Image with Invalid server count
+        timeout-minutes: 1
+        id: test-validation-server-count
+        continue-on-error: true
+        run: |
+          ! docker run \
+          -e STRATEGY=PERCENTAGE \
+          -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 \
+          -e COOKIE_PERCENTAGE_NAME=my_app \
+          -e SERVER_COUNT=foo \
+          "${{ env.IMAGE_NAME }}"
+
+      - name: Run Docker Image with Invalid DNS Resolver
+        timeout-minutes: 1
+        id: test-validation-dns-resolver
+        continue-on-error: true
+        run: |
+          ! docker run \
+          -e STRATEGY=PERCENTAGE \
+          -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 \
+          -e COOKIE_PERCENTAGE_NAME=my_app \
+          -e DNS_RESOLVER=foo \
+          "${{ env.IMAGE_NAME }}"
+
+      - name: Check for failures
+        if: always()
+        env:
+          STEPS_CONTEXT: ${{ toJson(steps) }}
+        run: |
+          set +e
+          ! echo "$STEPS_CONTEXT" | grep -q 'failure'
