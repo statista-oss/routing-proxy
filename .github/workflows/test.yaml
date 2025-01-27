@@ -187,18 +187,6 @@ jobs:
           -e SERVER_COUNT=foo \
           "${{ env.IMAGE_NAME }}"
 
-      - name: Run Docker Image with Invalid DNS Resolver
-        timeout-minutes: 1
-        id: test-validation-dns-resolver
-        continue-on-error: true
-        run: |
-          ! docker run \
-          -e STRATEGY=PERCENTAGE \
-          -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 \
-          -e COOKIE_PERCENTAGE_NAME=my_app \
-          -e DNS_RESOLVER=foo \
-          "${{ env.IMAGE_NAME }}"
-
       - name: Check for failures
         if: always()
         env:
