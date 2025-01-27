@@ -41,10 +41,6 @@ how much traffic should be routed to the old application
 ### PERCENTAGE_NEW
 how much traffic should be routed to the new application
 
-### DNS_RESOLVER (optional, default=1.1.1.1)
-The DNS resolver to use for resolving the domain names to IP addresses.
-If you want to reroute internal traffic you might want to change that.
-
 ### SERVER_COUNT (optional, default=5)
 as we are using DNS Resolver we try to create a server for each IP address we get back from the DNS query. 
 This is the maximum amount of servers we will create. 
