@@ -98,13 +98,13 @@ jobs:
         id: test-percentage-sticky-old-domain
         continue-on-error: true
         run: |
-          curl -Is localhost:80 --cookie "my_app=old_domain" | grep -i -e "server: Apache"
+          curl -Is localhost:80 --cookie "my_app=old_domain_50" | grep -i -e "server: Apache"
 
       - name: Test Docker Image with Percentage Strategy with sticky cookie on new domain
         id: test-percentage-sticky-new-domain
         continue-on-error: true
         run: |
-          curl -Is localhost:80 --cookie "my_app=new_domain" | grep -i -e "x-served-by: cache-"
+          curl -Is localhost:80 --cookie "my_app=new_domain_50" | grep -i -e "x-served-by: cache-"
 
       - name: Test Docker Image with Percentage Strategy with round robin
         id: test-percentage-round-robin
