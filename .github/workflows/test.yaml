@@ -187,6 +187,30 @@ jobs:
           -e SERVER_COUNT=foo \
           "${{ env.IMAGE_NAME }}"
 
+      - name: Run Docker Image with Invalid old server params
+        timeout-minutes: 1
+        id: test-validation-old-server-params
+        continue-on-error: true
+        run: |
+          ! docker run \
+          -e STRATEGY=PERCENTAGE \
+          -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 \
+          -e SERVER_PARAMS_OLD=bar \
+          -e COOKIE_PERCENTAGE_NAME=my_app \
+          "${{ env.IMAGE_NAME }}"
+
+      - name: Run Docker Image with Invalid new server params
+        timeout-minutes: 1
+        id: test-validation-new-server-params
+        continue-on-error: true
+        run: |
+          ! docker run \
+          -e STRATEGY=PERCENTAGE \
+          -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 \
+          -e SERVER_PARAMS_NEW=bar \
+          -e COOKIE_PERCENTAGE_NAME=my_app \
+          "${{ env.IMAGE_NAME }}"
+
       - name: Check for failures
         if: always()
         env:
