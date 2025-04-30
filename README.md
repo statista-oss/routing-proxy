@@ -45,6 +45,23 @@ how much traffic should be routed to the new application
 as we are using DNS Resolver we try to create a server for each IP address we get back from the DNS query. 
 This is the maximum amount of servers we will create. 
 
+### SERVER_PARAMS_NEW (optional, default=check)
+>know what you do!
+
+here you can override the server parameters for the new servers
+see [here](https://www.haproxy.com/documentation/haproxy-configuration-manual/latest/#5)
+
+### SERVER_PARAMS_OLD (optional, default=check)
+>know what you do!
+
+here you can override the server parameters for the old servers
+see [here](https://www.haproxy.com/documentation/haproxy-configuration-manual/latest/#5)
+
+### REWRITE_HOST_NEW (optional, default=0)
+wether to rewrite the host header to the new domain or not
+
+### REWRITE_HOST_OLD (optional, default=0)
+wether to rewrite the host header to the old domain or not
 
 ## Local Testing
 
