@@ -23,14 +23,17 @@ jobs:
         run: |
           echo "IMAGE_NAME=`echo ${{ env.REGISTRY }}/${{ github.repository }}:${{ github.sha }} | tr '[:upper:]' '[:lower:]'`" >> ${GITHUB_ENV}
 
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         with:
           tags: "${{ env.IMAGE_NAME }}"
           platforms: linux/amd64
+          pull: 'true'
+          load: 'true'
+
 
       -
         name: Scan for vulnerabilities
-        uses: crazy-max/ghaction-container-scan@v3
+        uses: crazy-max/ghaction-container-scan@v4
         id: scan
         env:
           TRIVY_DISABLE_VEX_NOTICE: true
@@ -51,11 +54,11 @@ jobs:
         run: |
           docker run --name statista_proxy -d -p80:80 \
           -e STRATEGY=COOKIE \
-          -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 \
+          -e OLD_DOMAIN=heise.de:443 -e NEW_DOMAIN=apache.org:443 \
           -e COOKIE_STRATEGY_NAME="my_app_routing=new" \
           "${{ env.IMAGE_NAME }}"
 
-          sleep 2
+          sleep 4
           docker ps -a
           docker logs statista_proxy
 
@@ -79,12 +82,12 @@ jobs:
         run: |
           docker run --name statista_proxy -d -p80:80 \
           -e STRATEGY=PERCENTAGE \
-          -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 \
+          -e OLD_DOMAIN=heise.de:443 -e NEW_DOMAIN=apache.org:443 \
           -e PERCENTAGE_NEW=50 -e PERCENTAGE_OLD=50 \
           -e COOKIE_PERCENTAGE_NAME=my_app \
           "${{ env.IMAGE_NAME }}"
 
-          sleep 2
+          sleep 4
           docker ps -a
           docker logs statista_proxy
 
@@ -98,7 +101,7 @@ jobs:
         id: test-percentage-sticky-old-domain
         continue-on-error: true
         run: |
-          curl -Is localhost:80 --cookie "my_app=old_domain_50" | grep -i -e "server: Apache"
+          curl -Is localhost:80 --cookie "my_app=old_domain_50" | grep -i -e "server: nginx"
 
       - name: Test Docker Image with Percentage Strategy with sticky cookie on new domain
         id: test-percentage-sticky-new-domain
@@ -125,7 +128,7 @@ jobs:
       #  continue-on-error: true # important for allowing other steps to be run regardless of this one which might fail
       #  run: |
       #    ! docker run \ # important simply negate the exit code, since we expect the container to fail (which means succesfull validation)
-      #    -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 \
+      #    -e OLD_DOMAIN=heise.de:443 -e NEW_DOMAIN=apache.org:443 \
       #    "${{ env.IMAGE_NAME }}"
 
       # variable validation
@@ -136,7 +139,7 @@ jobs:
         run: |
           ! docker run \
           -e STRATEGY=PERCENTAGE \
-          -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 \
+          -e OLD_DOMAIN=heise.de:443 -e NEW_DOMAIN=apache.org:443 \
           -e PERCENTAGE_NEW=foo -e PERCENTAGE_OLD=50 \
           -e COOKIE_PERCENTAGE_NAME=my_app \
           "${{ env.IMAGE_NAME }}"
@@ -148,7 +151,7 @@ jobs:
         run: |
           ! docker run \
           -e STRATEGY=PERCENTAGE \
-          -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 \
+          -e OLD_DOMAIN=heise.de:443 -e NEW_DOMAIN=apache.org:443 \
           -e PERCENTAGE_NEW=50 -e PERCENTAGE_OLD=foo \
           -e COOKIE_PERCENTAGE_NAME=my_app \
           "${{ env.IMAGE_NAME }}"
@@ -171,7 +174,7 @@ jobs:
         run: |
           ! docker run \
           -e STRATEGY=PERCENTAGE \
-          -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:lol \
+          -e OLD_DOMAIN=heise.de:443 -e NEW_DOMAIN=apache.org:lol \
           -e COOKIE_PERCENTAGE_NAME=my_app \
           "${{ env.IMAGE_NAME }}"
 
@@ -182,7 +185,7 @@ jobs:
         run: |
           ! docker run \
           -e STRATEGY=PERCENTAGE \
-          -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 \
+          -e OLD_DOMAIN=heise.de:443 -e NEW_DOMAIN=apache.org:443 \
           -e COOKIE_PERCENTAGE_NAME=my_app \
           -e SERVER_COUNT=foo \
           "${{ env.IMAGE_NAME }}"
@@ -194,7 +197,7 @@ jobs:
         run: |
           ! docker run \
           -e STRATEGY=PERCENTAGE \
-          -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 \
+          -e OLD_DOMAIN=heise.de:443 -e NEW_DOMAIN=apache.org:443 \
           -e SERVER_PARAMS_OLD=bar \
           -e COOKIE_PERCENTAGE_NAME=my_app \
           "${{ env.IMAGE_NAME }}"
@@ -206,7 +209,7 @@ jobs:
         run: |
           ! docker run \
           -e STRATEGY=PERCENTAGE \
-          -e OLD_DOMAIN=haproxy.com:443 -e NEW_DOMAIN=apache.org:443 \
+          -e OLD_DOMAIN=heise.de:443 -e NEW_DOMAIN=apache.org:443 \
           -e SERVER_PARAMS_NEW=bar \
           -e COOKIE_PERCENTAGE_NAME=my_app \
           "${{ env.IMAGE_NAME }}"
