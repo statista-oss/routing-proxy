@@ -23,7 +23,7 @@ jobs:
         run: |
           echo "IMAGE_NAME=`echo ${{ env.REGISTRY }}/${{ github.repository }}:${{ github.sha }} | tr '[:upper:]' '[:lower:]'`" >> ${GITHUB_ENV}
 
-      - uses: docker/build-push-action@v7
+      - uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         with:
           tags: "${{ env.IMAGE_NAME }}"
           platforms: linux/amd64
@@ -33,7 +33,7 @@ jobs:
 
       -
         name: Scan for vulnerabilities
-        uses: crazy-max/ghaction-container-scan@v4
+        uses: crazy-max/ghaction-container-scan@a0a3900b79d158c85ccf034e5368fae620a9233a # v4
         id: scan
         env:
           TRIVY_DISABLE_VEX_NOTICE: true
@@ -45,7 +45,7 @@ jobs:
       -
         name: Upload SARIF file
         if: ${{ steps.scan.outputs.sarif != '' }}
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4
         with:
           sarif_file: ${{ steps.scan.outputs.sarif }}
 
