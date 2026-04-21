@@ -4,6 +4,7 @@
     "config:recommended",
     "config:best-practices"
   ],
+  "automerge": true,
   "packageRules": [
     {
       "matchDepTypes": ["dependencies"],
