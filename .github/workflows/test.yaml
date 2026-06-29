@@ -33,7 +33,7 @@ jobs:
 
       -
         name: Scan for vulnerabilities
-        uses: crazy-max/ghaction-container-scan@a0a3900b79d158c85ccf034e5368fae620a9233a # v4
+        uses: crazy-max/ghaction-container-scan@ffcba8deb5cb3531954cbedbbcd0179d79edf510 # v4
         id: scan
         env:
           TRIVY_DISABLE_VEX_NOTICE: true
