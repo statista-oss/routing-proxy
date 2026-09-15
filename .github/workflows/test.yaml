@@ -23,7 +23,7 @@ jobs:
         run: |
           echo "IMAGE_NAME=`echo ${{ env.REGISTRY }}/${{ github.repository }}:${{ github.sha }} | tr '[:upper:]' '[:lower:]'`" >> ${GITHUB_ENV}
 
-      - uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           tags: "${{ env.IMAGE_NAME }}"
           platforms: linux/amd64
