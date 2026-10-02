@@ -1,4 +1,4 @@
-FROM haproxy:lts-alpine@sha256:4293e7e02c70e143778c86b4916f1b89e04f7a9221534b9abf6cace218c6b95f
+FROM haproxy:lts-alpine@sha256:7af8255207ee9964ccb4eec8ce4b7a40b777769665e3ae83897fb01b24d8a43a
 
 LABEL org.opencontainers.image.source="https://github.com/statista-oss/proxy-router"
 LABEL org.opencontainers.image.description="haproxy configurable through env vars for different routing strategies"
