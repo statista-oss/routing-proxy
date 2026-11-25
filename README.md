@@ -58,10 +58,10 @@ here you can override the server parameters for the old servers
 see [here](https://www.haproxy.com/documentation/haproxy-configuration-manual/latest/#5)
 
 ### REWRITE_HOST_NEW (optional, default=0)
-wether to rewrite the host header to the new domain or not
+whether to rewrite the host header to the new domain for requests routed to the new application (both strategies)
 
 ### REWRITE_HOST_OLD (optional, default=0)
-wether to rewrite the host header to the old domain or not
+whether to rewrite the host header to the old domain for requests routed to the old application (both strategies)
 
 ## Local Testing
 
@@ -86,6 +86,9 @@ curl -I localhost:80
 
 > notice the `set-cookie` header which should contain `my_app=new_domain` or `my_app=old_domain`
 further requests made by the same client will stick to this server
+
+with `-e REWRITE_HOST_OLD=1 -e REWRITE_HOST_NEW=1` each side receives its own domain as `Host` header
+(e.g. needed for AWS Lambda Function URLs)
 
 ### Cookie based routing
 
