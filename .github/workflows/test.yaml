@@ -121,6 +121,39 @@ jobs:
         if: success() || failure()
         run: docker rm -f statista_proxy
 
+      # percentage strategy with host header rewrite
+      # both backends echo the received request headers, so we can check the Host header per side
+      # both domains must accept TLS connections without SNI, as haproxy does not send one
+      - name: Run Docker Image with Percentage Strategy and Host Rewrite
+        run: |
+          docker run --name statista_proxy -d -p80:80 \
+          -e STRATEGY=PERCENTAGE \
+          -e OLD_DOMAIN=httpbin.org:443 -e NEW_DOMAIN=www.httpbin.org:443 \
+          -e PERCENTAGE_NEW=50 -e PERCENTAGE_OLD=50 \
+          -e COOKIE_PERCENTAGE_NAME=my_app \
+          -e REWRITE_HOST_OLD=1 -e REWRITE_HOST_NEW=1 \
+          "${{ env.IMAGE_NAME }}"
+
+          sleep 4
+          docker ps -a
+          docker logs statista_proxy
+
+      - name: Test Docker Image with Percentage Strategy and Host Rewrite on old domain
+        id: test-percentage-rewrite-host-old
+        continue-on-error: true
+        run: |
+          curl -s localhost:80/headers --cookie "my_app=old_domain_50" | grep -i -E '"host": *"httpbin\.org'
+
+      - name: Test Docker Image with Percentage Strategy and Host Rewrite on new domain
+        id: test-percentage-rewrite-host-new
+        continue-on-error: true
+        run: |
+          curl -s localhost:80/headers --cookie "my_app=new_domain_50" | grep -i -E '"host": *"www\.httpbin\.org'
+
+      - name: Stop the Percentage Strategy with Host Rewrite Docker Image
+        if: success() || failure()
+        run: docker rm -f statista_proxy
+
       # validation TEMPLATE
       #- name: name of the test
       #  timeout-minutes: 1 # set so if the command runs successfully the test will fail
